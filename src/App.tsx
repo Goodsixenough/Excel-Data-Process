@@ -23,6 +23,7 @@ export default function App() {
   const [aggregationMethod, setAggregationMethod] = useState<AggregationMethod>('average');
   const [fileEncoding, setFileEncoding] = useState<string>('UTF-8');
   const [downloadFilename, setDownloadFilename] = useState<string>('');
+  const [isDragging, setIsDragging] = useState(false);
   
   // Processing State
   const [isProcessing, setIsProcessing] = useState(false);
@@ -63,11 +64,7 @@ export default function App() {
     });
   };
 
-  // Handle File Upload
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const uploadedFile = e.target.files?.[0];
-    if (!uploadedFile) return;
-
+  const processFile = async (uploadedFile: File) => {
     setFile(uploadedFile);
     setError(null);
     setProcessedResult(null);
@@ -91,6 +88,33 @@ export default function App() {
     } catch (err) {
       setError('Failed to parse file. Please check the format or encoding.');
       console.error(err);
+    }
+  };
+
+  // Handle File Upload
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const uploadedFile = e.target.files?.[0];
+    if (!uploadedFile) return;
+    await processFile(uploadedFile);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile) {
+      await processFile(droppedFile);
     }
   };
   
@@ -340,10 +364,22 @@ export default function App() {
                 <h2 className="text-lg font-semibold">Upload Excel or CSV File</h2>
               </div>
               
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+              <label 
+                className={cn(
+                  "flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-colors",
+                  isDragging 
+                    ? "border-blue-500 bg-blue-50" 
+                    : "border-slate-300 bg-slate-50 hover:bg-slate-100"
+                )}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <Upload className="w-8 h-8 mb-3 text-slate-400" />
-                  <p className="mb-2 text-sm text-slate-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                  <Upload className={cn("w-8 h-8 mb-3", isDragging ? "text-blue-500" : "text-slate-400")} />
+                  <p className="mb-2 text-sm text-slate-500">
+                    <span className="font-semibold">Click to upload</span> or drag and drop
+                  </p>
                   <p className="text-xs text-slate-500">.xlsx, .xls, or .csv files</p>
                 </div>
                 <input type="file" className="hidden" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} />
